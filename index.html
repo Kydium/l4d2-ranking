@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L4D2 - Ranking MMR</title>
+<meta http-equiv="refresh" content="60">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --neon-cyan: #00f5ff;
+    --neon-purple: #bf00ff;
+    --neon-blue: #0066ff;
+    --neon-pink: #ff00aa;
+    --neon-red: #ff3366;
+    --neon-green: #00ff88;
+    --neon-gold: #ffcc00;
+    --bg-dark: #020510;
+    --bg-card: rgba(0, 10, 30, 0.85);
+    --grid-color: rgba(0, 245, 255, 0.07);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg-dark);
+    color: #c8d8ff;
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    padding: 30px 20px;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 50px 50px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+    animation: float 10s ease-in-out infinite alternate;
+  }
+  .blob1 { width: 500px; height: 500px; background: var(--neon-purple); top: -150px; left: -100px; animation-delay: 0s; }
+  .blob2 { width: 400px; height: 400px; background: var(--neon-cyan); bottom: 0; right: -100px; animation-delay: -4s; }
+  .blob3 { width: 300px; height: 300px; background: var(--neon-blue); top: 40%; left: 50%; animation-delay: -7s; }
+
+  @keyframes float {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.08); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 10;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 30px 20px 50px;
+    animation: fadeUp 1s 0.1s both;
+  }
+
+  .header-tag {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--neon-purple);
+    text-shadow: 0 0 10px var(--neon-purple);
+    margin-bottom: 16px;
+  }
+
+  .header-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2rem, 6vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    margin-bottom: 14px;
+  }
+
+  .header-title .line1 {
+    display: block;
+    color: #fff;
+    text-shadow:
+      0 0 20px rgba(255,255,255,0.6),
+      0 0 60px rgba(0,245,255,0.3);
+    animation: glitch 6s 2s infinite;
+  }
+  .header-title .line2 {
+    display: block;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px var(--neon-cyan));
+    font-size: 0.7em;
+  }
+
+  @keyframes glitch {
+    0%, 92%, 100% { transform: none; }
+    93% { transform: translate(-2px, 0) skew(-0.5deg); filter: hue-rotate(90deg); }
+    94% { transform: translate(2px, 0); }
+    95% { transform: translate(-1px, 0) skew(0.5deg); }
+    96% { transform: none; }
+  }
+
+  .header-subtitle {
+    font-size: 0.85rem;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(200,216,255,0.55);
+    margin-top: 12px;
+  }
+
+  .neon-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    box-shadow: 0 0 12px var(--neon-cyan);
+    margin: 30px auto;
+    max-width: 600px;
+  }
+
+  .section-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px var(--neon-cyan);
+    margin-bottom: 16px;
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid rgba(0,245,255,0.3);
+    border-radius: 2px;
+    background: rgba(0,245,255,0.05);
+  }
+
+  .ranking-section {
+    animation: fadeUp 1s 0.3s both;
+  }
+
+  .ranking-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 4px;
+    padding: 30px;
+    box-shadow:
+      0 0 30px rgba(0,245,255,0.1),
+      inset 0 0 30px rgba(0,245,255,0.03);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ranking-card::before,
+  .ranking-card::after {
+    content: '';
+    position: absolute;
+    width: 40px; height: 40px;
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 0 12px var(--neon-cyan);
+  }
+  .ranking-card::before {
+    top: -1px; left: -1px;
+    border-right: none; border-bottom: none;
+  }
+  .ranking-card::after {
+    bottom: -1px; right: -1px;
+    border-left: none; border-top: none;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  thead tr {
+    background: linear-gradient(90deg, rgba(0,245,255,0.1), rgba(191,0,255,0.1));
+    border-bottom: 2px solid var(--neon-cyan);
+  }
+
+  thead th {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 8px var(--neon-cyan);
+    padding: 16px 12px;
+    text-align: left;
+  }
+
+  thead th.center { text-align: center; }
+  thead th.right  { text-align: right; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(0,245,255,0.08);
+    transition: all 0.3s;
+  }
+
+  tbody tr:hover {
+    background: rgba(0,245,255,0.04);
+    box-shadow: inset 0 0 20px rgba(0,245,255,0.05);
+  }
+
+  tbody td {
+    padding: 14px 12px;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #c8d8ff;
+  }
+
+  td.rank {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    width: 60px;
+    color: rgba(200,216,255,0.5);
+    letter-spacing: 1px;
+  }
+
+  td.mmr {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 8px rgba(0,245,255,0.5);
+    width: 100px;
+    letter-spacing: 1px;
+  }
+
+  td.wl {
+    font-family: 'Rajdhani', sans-serif;
+    text-align: right;
+    color: rgba(200,216,255,0.7);
+    font-weight: 600;
+    width: 90px;
+  }
+
+  td.player {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #fff;
+  }
+
+  td.rank-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    width: 110px;
+  }
+
+  .rango-leyenda  { color: var(--neon-gold);  text-shadow: 0 0 10px var(--neon-gold); }
+  .rango-maestro  { color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); }
+  .rango-diamante { color: var(--neon-cyan);  text-shadow: 0 0 10px var(--neon-cyan); }
+  .rango-platino  { color: #b8d4ff;           text-shadow: 0 0 10px #b8d4ff; }
+  .rango-oro      { color: #ffd700;           text-shadow: 0 0 10px #ffd700; }
+  .rango-plata    { color: #d0d0d0;           text-shadow: 0 0 8px #d0d0d0; }
+  .rango-bronce   { color: #cd7f32;           text-shadow: 0 0 8px #cd7f32; }
+  .rango-hierro   { color: #888; }
+
+  tr.gold td.rank::before {
+    content: '1';
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    background: linear-gradient(135deg, #ffcc00, #ff9900);
+    color: #020510;
+    border-radius: 50%;
+    font-weight: 900;
+    box-shadow: 0 0 15px var(--neon-gold);
+    text-shadow: none;
+  }
+  tr.gold td.rank { color: transparent; font-size: 0; }
+
+  tr.silver td.rank::before {
+    content: '2';
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    background: linear-gradient(135deg, #e0e0e0, #a0a0a0);
+    color: #020510;
+    border-radius: 50%;
+    font-weight: 900;
+    box-shadow: 0 0 12px #e0e0e0;
+    text-shadow: none;
+  }
+  tr.silver td.rank { color: transparent; font-size: 0; }
+
+  tr.bronze td.rank::before {
+    content: '3';
+    display: inline-block;
+    width: 28px; height: 28px;
+    line-height: 28px;
+    background: linear-gradient(135deg, #cd7f32, #8b4513);
+    color: #020510;
+    border-radius: 50%;
+    font-weight: 900;
+    box-shadow: 0 0 12px #cd7f32;
+    text-shadow: none;
+  }
+  tr.bronze td.rank { color: transparent; font-size: 0; }
+
+  tr.gold td.player,
+  tr.silver td.player,
+  tr.bronze td.player {
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255,255,255,0.4);
+  }
+
+  .rangos-section {
+    margin-top: 50px;
+    animation: fadeUp 1s 0.5s both;
+  }
+
+  .rangos-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(191,0,255,0.2);
+    border-radius: 4px;
+    padding: 25px;
+    box-shadow:
+      0 0 30px rgba(191,0,255,0.1),
+      inset 0 0 30px rgba(191,0,255,0.03);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .rangos-card::before,
+  .rangos-card::after {
+    content: '';
+    position: absolute;
+    width: 30px; height: 30px;
+    border: 2px solid var(--neon-purple);
+    box-shadow: 0 0 10px var(--neon-purple);
+  }
+  .rangos-card::before {
+    top: -1px; right: -1px;
+    border-left: none; border-bottom: none;
+  }
+  .rangos-card::after {
+    bottom: -1px; left: -1px;
+    border-right: none; border-top: none;
+  }
+
+  .rangos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .rango-item {
+    padding: 12px;
+    text-align: center;
+    border: 1px solid rgba(200,216,255,0.1);
+    border-radius: 2px;
+    background: rgba(0,5,16,0.5);
+    transition: all 0.3s;
+  }
+
+  .rango-item:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0,245,255,0.2);
+  }
+
+  .rango-item .nombre {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .rango-item .mmr-rango {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.75rem;
+    color: rgba(200,216,255,0.6);
+    letter-spacing: 1px;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 40px 20px 20px;
+    margin-top: 30px;
+    border-top: 1px solid rgba(0,245,255,0.1);
+    animation: fadeUp 1s 0.7s both;
+  }
+
+  .footer-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(200,216,255,0.5);
+    margin-bottom: 8px;
+  }
+
+  .footer-update {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 8px var(--neon-cyan);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(200,216,255,0.4);
+    font-style: italic;
+    letter-spacing: 2px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 15px 10px; }
+    .ranking-card { padding: 15px; }
+    table { font-size: 0.85rem; }
+    thead th { padding: 10px 6px; font-size: 0.65rem; letter-spacing: 1px; }
+    tbody td { padding: 10px 6px; font-size: 0.85rem; }
+    td.rank-badge { font-size: 0.65rem; width: auto; }
+    td.mmr { width: auto; font-size: 0.85rem; }
+    td.wl { width: auto; }
+    .header-title { font-size: 1.8rem; }
+    .rangos-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="scanlines"></div>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="header-tag">// Versus League - ZoneMod</div>
+    <h1 class="header-title">
+      <span class="line1">Ranking</span>
+      <span class="line2">Top MMR</span>
+    </h1>
+    <div class="header-subtitle">Sistema Elo - Left 4 Dead 2</div>
+  </div>
+
+  <div class="neon-divider"></div>
+
+  <section class="ranking-section">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <span class="section-tag">// 001 - Mejores Jugadores</span>
+    </div>
+
+    <div class="ranking-card">
+      <table>
+        <thead>
+          <tr>
+            <th class="center">#</th>
+            <th>Jugador</th>
+            <th>Rango</th>
+            <th class="center">MMR</th>
+            <th class="right">W / L</th>
+          </tr>
+        </thead>
+        <tbody>
+          {RANKING_ROWS}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="rangos-section">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <span class="section-tag" style="color: var(--neon-purple); border-color: rgba(191,0,255,0.3); background: rgba(191,0,255,0.05); text-shadow: 0 0 10px var(--neon-purple);">// 002 - Sistema de Rangos</span>
+    </div>
+
+    <div class="rangos-card">
+      <div class="rangos-grid">
+        <div class="rango-item">
+          <div class="nombre rango-leyenda">Leyenda</div>
+          <div class="mmr-rango">2200+</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-maestro">Maestro</div>
+          <div class="mmr-rango">2000 - 2199</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-diamante">Diamante</div>
+          <div class="mmr-rango">1800 - 1999</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-platino">Platino</div>
+          <div class="mmr-rango">1650 - 1799</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-oro">Oro</div>
+          <div class="mmr-rango">1500 - 1649</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-plata">Plata</div>
+          <div class="mmr-rango">1350 - 1499</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-bronce">Bronce</div>
+          <div class="mmr-rango">1200 - 1349</div>
+        </div>
+        <div class="rango-item">
+          <div class="nombre rango-hierro">Hierro</div>
+          <div class="mmr-rango">0 - 1199</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <div class="footer-text">L4D2 MMR System - ZoneMod Server</div>
+    <div class="footer-update">Ultima actualizacion: {LAST_UPDATE}</div>
+  </div>
+
+</div>
+
+</body>
+</html>
